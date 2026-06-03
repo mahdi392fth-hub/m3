@@ -7,7 +7,6 @@ std::string User::hashPassword(const std::string& pass) const {
     return std::to_string(hasher(pass));
 }
 
-// Keeping the original initialization list format from phase 1
 User::User(std::string uId, std::string uname, std::string pass, Profile prof, bool isHashed) 
     : id(uId), username(uname), userProfile(prof) {
     passwordHash = isHashed ? pass : hashPassword(pass);

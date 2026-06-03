@@ -14,24 +14,20 @@ std::string Post::getAuthorUsername() const { return authorUsername; }
 std::string Post::getContent() const { return content; }
 std::string Post::getTimestamp() const { return timestamp; }
 
-const std::vector<std::string>& Post::getLikedBy() const { 
-    return likedBy; 
-}
-
-int Post::getLikesCount() const { 
-    return (int)likedBy.size(); 
-}
+const std::vector<std::string>& Post::getLikedBy() const { return likedBy; }
+int Post::getLikesCount() const { return (int)likedBy.size(); }
 
 bool Post::toggleLike(const std::string& username) {
-    // Standard human loop to search for pre-existing like
+    // If already liked, remove the like
     for (size_t i = 0; i < likedBy.size(); i++) {
         if (likedBy[i] == username) {
             likedBy.erase(likedBy.begin() + i);
-            return false; // Unliked
+            return false; 
         }
     }
+    // Otherwise, add a new like
     likedBy.push_back(username);
-    return true; // Liked
+    return true;
 }
 
 void Post::display(int commentCount) const {

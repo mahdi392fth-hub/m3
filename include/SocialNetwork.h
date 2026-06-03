@@ -13,7 +13,6 @@ private:
     std::vector<Comment> comments;
     int currentUserIndex; 
     
-    // شمارنده‌های طبیعی برای آیدی‌ها به جای استفاده از size()
     int nextUserNum;
     int nextPostNum;
 
@@ -26,8 +25,8 @@ private:
     void saveData(); 
 
 public:
-    SocialNetwork(); 
-    ~SocialNetwork(); 
+    SocialNetwork(); // constructor
+    ~SocialNetwork(); // destructor
     void start();
     
     void registerUser();

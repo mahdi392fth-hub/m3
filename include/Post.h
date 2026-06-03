@@ -10,7 +10,7 @@ private:
     std::string authorUsername;
     std::string content;
     std::string timestamp;
-    std::vector<std::string> likedBy; 
+    std::vector<std::string> likedBy; // Stores usernames of users who liked the post
 
 public:
     Post(std::string postId, std::string author, std::string text, std::string time);
@@ -21,8 +21,10 @@ public:
     std::string getTimestamp() const;
     
     const std::vector<std::string>& getLikedBy() const;
-    bool toggleLike(const std::string& username);
     int getLikesCount() const;
+    
+    // Handles liking/unliking logic for a user
+    bool toggleLike(const std::string& username);
 
     void display(int commentCount) const;
 };
