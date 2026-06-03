@@ -15,6 +15,3 @@ $(EXECUTABLE): $(OBJECTS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-clean:
-	del /Q src\*.o *.o $(EXECUTABLE).exe users.txt posts.txt follows.txt likes.txt comments.txt 2>nul || true
