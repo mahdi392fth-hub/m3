@@ -188,7 +188,7 @@ void SocialNetwork::start() {
             std::cout << "\n* Welcome to MinSocial *\n1. Register Account\n2. Login\n3. Exit\nChoice: ";
             if (!(std::cin >> choice)) { // Input validation fix to prevent infinite loop bugs
                 std::cin.clear();
-                std::string junk; std::cin >> junk;
+                std::string temp; std::cin >> temp;
                 std::cout << "Please enter a valid number.\n";
                 continue;
             }
@@ -200,10 +200,19 @@ void SocialNetwork::start() {
         } 
         else {
             std::cout << "\n--- Dashboard [@" << users[currentUserIndex].getUsername() << "] ---\n";
-            std::cout << "1. Write a Post\n2. View Feed\n3. Search Profiles\n4. Follow/Unfollow Menu\n5. Post Interactions\n6. Edit My Profile\n7. Security Settings\n8. Logout\nChoice: ";
+            std::cout << "1. Write a Post\n";
+            std::cout << "2. View Feed\n";
+            std::cout << "3. View Profile (Self/Others)\n";
+            std::cout << "4. Follow/Unfollow Menu\n";
+            std::cout << "5. Post Interactions (Like/Comment)\n";
+            std::cout << "6. Search System\n";
+            std::cout << "7. Edit My Profile\n";
+            std::cout << "8. Security Settings (Change Password)\n";
+            std::cout << "9. Logout\nChoice: ";
+            
             if (!(std::cin >> choice)) {
                 std::cin.clear();
-                std::string junk; std::cin >> junk;
+                std::string temp; std::cin >> temp;
                 std::cout << "Invalid input format.\n";
                 continue;
             }
@@ -213,15 +222,16 @@ void SocialNetwork::start() {
             else if (choice == 3) viewProfile();
             else if (choice == 4) manageRelationships();
             else if (choice == 5) interactWithPost();
-            else if (choice == 6) editProfile();
-            else if (choice == 7) {
+            else if (choice == 6) searchSystem();
+            else if (choice == 7) editProfile();
+            else if (choice == 8) {
                 std::string newPass;
                 std::cout << "Enter new password: "; std::cin >> newPass;
                 users[currentUserIndex].changePassword(newPass);
                 saveData();
                 std::cout << "Password modified.\n";
             }
-            else if (choice == 8) currentUserIndex = -1;
+            else if (choice == 9) currentUserIndex = -1;
             else std::cout << "Unknown command.\n";
         }
     }
@@ -371,7 +381,6 @@ void SocialNetwork::viewHomeFeed() {
     const auto& myFollowings = users[currentUserIndex].getFollowing();
     bool hasData = false;
 
-    // Standard human loop iteration instead of complex reverse iterators everywhere
     for (int i = (int)posts.size() - 1; i >= 0; i--) {
         std::string author = posts[i].getAuthorUsername();
         if (std::find(myFollowings.begin(), myFollowings.end(), author) != myFollowings.end() ||
