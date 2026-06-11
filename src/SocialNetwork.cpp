@@ -699,17 +699,25 @@ void SocialNetwork::manageSavedPosts() {
 }
 
 void SocialNetwork::deleteCurrentUser() {
-    std::cout << "WARNING: Are you sure you want to permanently delete your account? (1 = Yes, 0 = No): ";
+    std::cout << "Are you sure you want to permanently delete your account? (1 = Yes, 0 = No): ";
     int confirm; std::cin >> confirm;
     if (confirm != 1) return;
 
     std::string targetUname = users[currentUserIndex].getUsername();
 
+    // collect all post IDs of this user before erasing them
+    std::vector<std::string> userPostIds;
+    for (size_t i = 0; i < posts.size(); i++) {
+        if (posts[i].getAuthorUsername() == targetUname) {
+            userPostIds.push_back(posts[i].getId());
+        }
+    }
+
     // delete all posts of this user
     for (auto it = posts.begin(); it != posts.end(); ) {
         if (it->getAuthorUsername() == targetUname) {
             std::string pId = it->getId();
-            it = posts.erase(it);
+            it = posts.erase(it); // Erase advances the iterator safely
             
             // delete comments of these posts
             for (auto cit = comments.begin(); cit != comments.end(); ) {
@@ -717,8 +725,18 @@ void SocialNetwork::deleteCurrentUser() {
                 else ++cit;
             }
         } else {
-            // remove user's likes from other posts
-            it->toggleLike(targetUname);
+            // Check if user liked the post
+            bool alreadyLiked = false;
+            const auto& likedUsers = it->getLikedBy();
+            for (size_t k = 0; k < likedUsers.size(); k++) {
+                if (likedUsers[k] == targetUname) {
+                    alreadyLiked = true;
+                    break;
+                }
+            }
+            if (alreadyLiked) {
+                it->toggleLike(targetUname);
+            }
             ++it;
         }
     }
@@ -736,10 +754,14 @@ void SocialNetwork::deleteCurrentUser() {
     for (size_t i = 0; i < users.size(); i++) {
         users[i].unfollowUser(targetUname);
         users[i].removeFollower(targetUname);
-        users[i].unsavePost(targetUname);
+        
+        // Remove post IDs from bookmarks
+        for (size_t j = 0; j < userPostIds.size(); j++) {
+            users[i].unsavePost(userPostIds[j]);
+        }
     }
 
-   // remove user from users vector
+    // remove user from users vector
     users.erase(users.begin() + currentUserIndex);
     currentUserIndex = -1; // log out current user
     saveData();
