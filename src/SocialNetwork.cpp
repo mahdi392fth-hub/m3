@@ -48,6 +48,13 @@ int SocialNetwork::getCommentCountForPost(const std::string& postId) const {
 }
 
 void SocialNetwork::loadData() {
+    // Reset data to read from files again
+    users.clear();
+    posts.clear();
+    comments.clear();
+    nextUserNum = 1;
+    nextPostNum = 1;
+
     // Load user profiles
     std::ifstream uFile("users.txt");
     std::string line;
@@ -78,14 +85,16 @@ void SocialNetwork::loadData() {
     while (std::getline(pFile, line)) {
         if(line.empty()) continue;
         std::stringstream ss(line);
-        std::string id, author, content, time;
+        std::string id, author, content, time, statusEdited;
         
         std::getline(ss, id, '|');
         std::getline(ss, author, '|');
         std::getline(ss, content, '|');
         std::getline(ss, time, '|');
+        std::getline(ss, statusEdited, '|');
         
-        posts.push_back(Post(id, author, content, time));
+        bool isEd = (statusEdited == "1");
+        posts.push_back(Post(id, author, content, time, isEd));
         
         // Update next available post ID
         int num = std::stoi(id.substr(1));
@@ -115,10 +124,10 @@ void SocialNetwork::loadData() {
 
     // Load post likes
     std::ifstream lFile("likes.txt");
-    std::string pId, uName;
     while (std::getline(lFile, line)) {
         if (line.empty()) continue;
         std::stringstream ss(line);
+        std::string pId, uName;
         std::getline(ss, pId, '|');
         std::getline(ss, uName, '|');
         
@@ -130,10 +139,10 @@ void SocialNetwork::loadData() {
 
     // Load post comments
     std::ifstream cFile("comments.txt");
-    std::string cPostId, cAuth, cText, cTime;
     while (std::getline(cFile, line)) {
         if (line.empty()) continue;
         std::stringstream ss(line);
+        std::string cPostId, cAuth, cText, cTime;
         std::getline(ss, cPostId, '|');
         std::getline(ss, cAuth, '|');
         std::getline(ss, cText, '|');
@@ -142,6 +151,22 @@ void SocialNetwork::loadData() {
         comments.push_back(Comment(cPostId, cAuth, cText, cTime));
     }
     cFile.close();
+
+    // Load all user bookmarks
+    std::ifstream sFile("saved.txt");
+    while (std::getline(sFile, line)) {
+        if (line.empty()) continue;
+        std::stringstream ss(line);
+        std::string uName, pId;
+        std::getline(ss, uName, '|');
+        std::getline(ss, pId, '|');
+        
+        int uIdx = findUserIndex(uName);
+        if (uIdx != -1) {
+            users[uIdx].savePost(pId);
+        }
+    }
+    sFile.close();
 }
 
 void SocialNetwork::saveData() {
@@ -159,7 +184,8 @@ void SocialNetwork::saveData() {
     std::ofstream pFile("posts.txt");
     for (auto& p : posts) {
         pFile << p.getId() << "|" << p.getAuthorUsername() << "|" 
-              << p.getContent() << "|" << p.getTimestamp() << "\n";
+              << p.getContent() << "|" << p.getTimestamp() << "|" 
+              << (p.getIsEdited() ? "1" : "0") << "\n";
     }
     pFile.close();
 
@@ -188,6 +214,25 @@ void SocialNetwork::saveData() {
               << c.getText() << "|" << c.getTimestamp() << "\n";
     }
     cFile.close();
+
+    // Save all user bookmarks
+    std::ofstream sFile("saved.txt");
+    for (size_t i = 0; i < users.size(); i++) {
+        for (const auto& pId : users[i].getSavedPostIds()) {
+            sFile << users[i].getUsername() << "|" << pId << "\n";
+        }
+    }
+    sFile.close();
+}
+
+void SocialNetwork::refreshSystemData() {
+    // Reloads all files to refresh the database
+    std::string currentUsername = (currentUserIndex != -1) ? users[currentUserIndex].getUsername() : "";
+    loadData();
+    if (!currentUsername.empty()) {
+        currentUserIndex = findUserIndex(currentUsername);
+    }
+    std::cout << "Data reloaded successfully.\n";
 }
 
 void SocialNetwork::start() {
@@ -195,7 +240,7 @@ void SocialNetwork::start() {
     while (true) {
         // user not logged in yet
         if (currentUserIndex == -1) { 
-            std::cout << "\n Welcome to MMA Mini Social Application!\n1. Register\n2. Login\n3. Exit\nChoice: ";
+            std::cout << "\n Welcome to MMA Mini Social Application!\n1. Register\n2. Login\n3. Refresh Data\n4. Exit\nChoice: ";
             if (!(std::cin >> choice)) { // input validation
                 std::cin.clear();
                 std::string temp; std::cin >> temp;
@@ -205,7 +250,8 @@ void SocialNetwork::start() {
 
             if (choice == 1) registerUser();
             else if (choice == 2) loginUser();
-            else if (choice == 3) break;
+            else if (choice == 3) refreshSystemData();
+            else if (choice == 4) break;
             else std::cout << "Invalid input!\n";
         } 
         // user logged in successfully
@@ -219,7 +265,11 @@ void SocialNetwork::start() {
             std::cout << "6. Search Post/User\n";
             std::cout << "7. Edit Profile\n";
             std::cout << "8. Change Password\n";
-            std::cout << "9. Logout\nChoice: ";
+            std::cout << "9. Manage My Posts (Edit/Delete)\n";
+            std::cout << "10. Saved Posts (Bookmarks)\n";
+            std::cout << "11. Delete My Account\n";
+            std::cout << "12. Refresh / Sync Data\n";
+            std::cout << "13. Logout\nChoice: ";
             
             if (!(std::cin >> choice)) {
                 std::cin.clear();
@@ -242,7 +292,11 @@ void SocialNetwork::start() {
                 saveData();
                 std::cout << "Password updated.\n";
             }
-            else if (choice == 9) currentUserIndex = -1; // user logging out
+            else if (choice == 9) manageMyPosts();
+            else if (choice == 10) manageSavedPosts();
+            else if (choice == 11) deleteCurrentUser();
+            else if (choice == 12) refreshSystemData();
+            else if (choice == 13) currentUserIndex = -1; // user logging out
             else std::cout << "Invalid input!\n";
         }
     }
@@ -400,21 +454,39 @@ void SocialNetwork::manageRelationships() {
 }
 
 void SocialNetwork::viewHomeFeed() {
-    std::cout << "\n--- Home Feed ---\n";
-    const auto& myFollowings = users[currentUserIndex].getFollowing();
-    bool hasData = false; // if new posts were found, returns true. if not, remains false
+    std::cout << "\n--- Feed Display Modes ---\n";
+    std::cout << "1. Sort by Timestamp (Newest First)\n2. Sort by Popularity (Most Liked First)\nChoice: ";
+    int feedChoice; std::cin >> feedChoice;
 
-    for (int i = (int)posts.size() - 1; i >= 0; i--) { // loops backward to show the recent posts first
+    std::vector<Post> feedPosts;
+    const auto& myFollowings = users[currentUserIndex].getFollowing();
+
+    // collects all relevant timeline posts
+    for (size_t i = 0; i < posts.size(); i++) {
         std::string author = posts[i].getAuthorUsername();
-        // checks to make sure the post was published by a following user or the user themselves
         if (std::find(myFollowings.begin(), myFollowings.end(), author) != myFollowings.end() ||
             author == users[currentUserIndex].getUsername()) {
-            posts[i].display(getCommentCountForPost(posts[i].getId()));
-            hasData = true; 
+            feedPosts.push_back(posts[i]);
         }
     }
-    if (!hasData) {
+
+    if (feedPosts.empty()) {
         std::cout << "No updates available.\n";
+        return;
+    }
+
+    // handles feed sorting
+    if (feedChoice == 1) {
+        std::reverse(feedPosts.begin(), feedPosts.end());
+    } else if (feedChoice == 2) {
+        std::sort(feedPosts.begin(), feedPosts.end(), [](const Post& a, const Post& b) {
+            return a.getLikesCount() > b.getLikesCount();
+        });
+    }
+
+    std::cout << "\n--- Home Feed ---\n";
+    for (const auto& p : feedPosts) {
+        p.display(getCommentCountForPost(p.getId()));
     }
 }
 
@@ -429,7 +501,7 @@ void SocialNetwork::interactWithPost() {
         return;
     }
 
-    std::cout << "1. Toggle Like\n2. Add a Comment\n3. Show Comments\nChoice: ";
+    std::cout << "1. Toggle Like\n2. Add a Comment\n3. Show Details & Comments Thread\n4. Save Post to Bookmarks\nChoice: ";
     int choice; std::cin >> choice;
 
     // toggles like on the selected post
@@ -458,6 +530,10 @@ void SocialNetwork::interactWithPost() {
     } 
     // displays the comments of the selected post
     else if (choice == 3) {
+        posts[pIdx].display(getCommentCountForPost(pId));
+        std::cout << "\n--- Liked By Users ---\n";
+        for(const auto& name : posts[pIdx].getLikedBy()) std::cout << " - @" << name << "\n";
+
         std::cout << "\n--- Thread [" << pId << "] ---\n";
         for (size_t i = 0; i < comments.size(); i++) {
             if (comments[i].getPostId() == pId) {
@@ -465,30 +541,47 @@ void SocialNetwork::interactWithPost() {
             }
         }
     }
+    // handles bookmarked saved posts
+    else if (choice == 4) {
+        if (users[currentUserIndex].savePost(pId)) {
+            std::cout << "Post bookmarked successfully.\n";
+            saveData();
+        } else {
+            std::cout << "This post is already in your saved list.\n";
+        }
+    }
 }
 
 void SocialNetwork::searchSystem() {
-    std::cout << "1. Find Users\n2. Filter Posts\nChoice: ";
+    std::cout << "1. Find Users by Username\n2. Find Users by Display Name\n3. Filter Posts by Keyword\n4. Filter Posts by Author Username\nChoice: ";
     int choice; std::cin >> choice;
     std::cin.ignore();
 
-    // searches for usernames
+    std::string term;
+    std::cout << "Search term: "; std::getline(std::cin, term);
+    std::cout << "\nMatches:\n";
+
     if (choice == 1) {
-        std::string term;
-        std::cout << "Search term: "; std::getline(std::cin, term);
-        std::cout << "\nMatches:\n";
         for (const auto& u : users) {
             if (u.getUsername().find(term) != std::string::npos) { // .find() method returns npos if it fails
                 std::cout << " -> @" << u.getUsername() << " [" << u.getProfile().getDisplayName() << "]\n";
             }
         }
-    // searches through post contents for the keyword
     } else if (choice == 2) {
-        std::string term;
-        std::cout << "Keyword: "; std::getline(std::cin, term);
-        std::cout << "\nMatches:\n";
+        for (const auto& u : users) {
+            if (u.getProfile().getDisplayName().find(term) != std::string::npos) {
+                std::cout << " -> @" << u.getUsername() << " [" << u.getProfile().getDisplayName() << "]\n";
+            }
+        }
+    } else if (choice == 3) {
         for (size_t i = 0; i < posts.size(); i++) {
             if (posts[i].getContent().find(term) != std::string::npos) {
+                posts[i].display(getCommentCountForPost(posts[i].getId()));
+            }
+        }
+    } else if (choice == 4) {
+        for (size_t i = 0; i < posts.size(); i++) {
+            if (posts[i].getAuthorUsername() == term) {
                 posts[i].display(getCommentCountForPost(posts[i].getId()));
             }
         }
@@ -507,4 +600,148 @@ void SocialNetwork::editProfile() {
     
     saveData();
     std::cout << "Profile updated.\n";
+}
+
+// ======================== Phase 3 Member Function Implementations ========================
+
+void SocialNetwork::manageMyPosts() {
+    std::cout << "\n--- Your Published Posts ---\n";
+    std::string currentUname = users[currentUserIndex].getUsername();
+    std::vector<std::string> myPostIds;
+
+    for (size_t i = 0; i < posts.size(); i++) {
+        if (posts[i].getAuthorUsername() == currentUname) {
+            posts[i].display(getCommentCountForPost(posts[i].getId()));
+            myPostIds.push_back(posts[i].getId());
+        }
+    }
+
+    if (myPostIds.empty()) {
+        std::cout << "You haven't posted anything yet.\n";
+        return;
+    }
+
+    std::cout << "1. Edit Content of a Post\n2. Permanently Delete a Post\n3. Back\nChoice: ";
+    int choice; std::cin >> choice;
+
+    if (choice == 1 || choice == 2) {
+        std::string targetId;
+        std::cout << "Enter Post ID: "; std::cin >> targetId;
+
+        // check if the post belongs to the user
+        if (std::find(myPostIds.begin(), myPostIds.end(), targetId) == myPostIds.end()) {
+            std::cout << "Access Denied: Invalid Post ID or unauthorized action.\n";
+            return;
+        }
+
+        int pIdx = findPostIndex(targetId);
+        if (choice == 1) {
+            std::string newText;
+            std::cin.ignore();
+            std::cout << "Enter new content: "; std::getline(std::cin, newText);
+            if (!newText.empty()) {
+                posts[pIdx].editContent(newText);
+                std::cout << "Post modified successfully.\n";
+            }
+        } 
+        else {
+            // delete post and its comments
+            posts.erase(posts.begin() + pIdx);
+
+            // delete comments of this post
+            for (auto it = comments.begin(); it != comments.end(); ) {
+                if (it->getPostId() == targetId) {
+                    it = comments.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            // remove post from all users bookmarks
+            for (size_t i = 0; i < users.size(); i++) {
+                users[i].unsavePost(targetId);
+            }
+
+            std::cout << "Post and its dependencies cleaned up securely.\n";
+        }
+        saveData();
+    }
+}
+
+void SocialNetwork::manageSavedPosts() {
+    const auto& savedIds = users[currentUserIndex].getSavedPostIds();
+    std::cout << "\n--- Bookmarked Posts ---\n";
+    
+    if (savedIds.empty()) {
+        std::cout << "Your saved bookmarks list is empty.\n";
+        return;
+    }
+
+    for (const auto& id : savedIds) {
+        int pIdx = findPostIndex(id);
+        if (pIdx != -1) {
+            posts[pIdx].display(getCommentCountForPost(id));
+        }
+    }
+
+    std::cout << "1. Remove a Post from Saved Bookmarks\n2. Back\nChoice: ";
+    int choice; std::cin >> choice;
+    if (choice == 1) {
+        std::string targetId;
+        std::cout << "Enter Post ID to unsave: "; std::cin >> targetId;
+        if (users[currentUserIndex].unsavePost(targetId)) {
+            std::cout << "Removed from bookmarks.\n";
+            saveData();
+        } else {
+            std::cout << "Post ID not found in saved list.\n";
+        }
+    }
+}
+
+void SocialNetwork::deleteCurrentUser() {
+    std::cout << "WARNING: Are you sure you want to permanently delete your account? (1 = Yes, 0 = No): ";
+    int confirm; std::cin >> confirm;
+    if (confirm != 1) return;
+
+    std::string targetUname = users[currentUserIndex].getUsername();
+
+    // delete all posts of this user
+    for (auto it = posts.begin(); it != posts.end(); ) {
+        if (it->getAuthorUsername() == targetUname) {
+            std::string pId = it->getId();
+            it = posts.erase(it);
+            
+            // delete comments of these posts
+            for (auto cit = comments.begin(); cit != comments.end(); ) {
+                if (cit->getPostId() == pId) cit = comments.erase(cit);
+                else ++cit;
+            }
+        } else {
+            // remove user's likes from other posts
+            it->toggleLike(targetUname);
+            ++it;
+        }
+    }
+
+    // delete comments made by this user
+    for (auto it = comments.begin(); it != comments.end(); ) {
+        if (it->getAuthor() == targetUname) {
+            it = comments.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    // clean followers, followings, and bookmarks
+    for (size_t i = 0; i < users.size(); i++) {
+        users[i].unfollowUser(targetUname);
+        users[i].removeFollower(targetUname);
+        users[i].unsavePost(targetUname);
+    }
+
+   // remove user from users vector
+    users.erase(users.begin() + currentUserIndex);
+    currentUserIndex = -1; // log out current user
+    saveData();
+    std::cout << "Account and records wiped out completely.\n";
 }

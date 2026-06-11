@@ -13,6 +13,7 @@ private:
     Profile userProfile;
     std::vector<std::string> following;
     std::vector<std::string> followers;
+    std::vector<std::string> savedPostIds; // Stores IDs of bookmarked posts
 
     // Hashes password for security
     std::string hashPassword(const std::string& pass) const;
@@ -40,6 +41,11 @@ public:
     bool unfollowUser(const std::string& targetUsername);
     void addFollower(const std::string& followerUsername);
     void removeFollower(const std::string& followerUsername);
+
+    // Bookmark Management
+    const std::vector<std::string>& getSavedPostIds() const;
+    bool savePost(const std::string& postId);
+    bool unsavePost(const std::string& postId);
 };
 
 #endif

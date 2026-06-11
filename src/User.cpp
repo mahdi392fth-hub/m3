@@ -72,3 +72,25 @@ void User::removeFollower(const std::string& followerUsername) {
         followers.erase(it);
     }
 }
+
+// Manage user bookmarks
+const std::vector<std::string>& User::getSavedPostIds() const {
+    return savedPostIds;
+}
+
+bool User::savePost(const std::string& postId) {
+    for (size_t i = 0; i < savedPostIds.size(); i++) {
+        if (savedPostIds[i] == postId) return false; 
+    }
+    savedPostIds.push_back(postId);
+    return true;
+}
+
+bool User::unsavePost(const std::string& postId) {
+    auto it = std::find(savedPostIds.begin(), savedPostIds.end(), postId);
+    if (it != savedPostIds.end()) {
+        savedPostIds.erase(it);
+        return true;
+    }
+    return false;
+}

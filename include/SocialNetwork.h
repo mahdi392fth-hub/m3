@@ -39,5 +39,10 @@ public:
     void viewHomeFeed();         // displays current user's and followed users posts
     void interactWithPost();     // handles likes and comments on a post
     void searchSystem();         // handles searching for users and post contents
+
+    void manageMyPosts();       // allows user to edit or delete their own posts
+    void manageSavedPosts();    // shows and removes bookmarked posts
+    void deleteCurrentUser();   // completely removes user and all their related data
+    void refreshSystemData();   // reads text files again to update data
 };
 #endif
