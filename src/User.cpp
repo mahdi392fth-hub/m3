@@ -79,6 +79,7 @@ const std::vector<std::string>& User::getSavedPostIds() const {
 }
 
 bool User::savePost(const std::string& postId) {
+    // Avoid duplicate bookmarks
     for (size_t i = 0; i < savedPostIds.size(); i++) {
         if (savedPostIds[i] == postId) return false; 
     }
@@ -87,6 +88,7 @@ bool User::savePost(const std::string& postId) {
 }
 
 bool User::unsavePost(const std::string& postId) {
+    // Find and remove from bookmarks
     auto it = std::find(savedPostIds.begin(), savedPostIds.end(), postId);
     if (it != savedPostIds.end()) {
         savedPostIds.erase(it);
