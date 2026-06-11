@@ -2,6 +2,7 @@
 #define PROFILE_H
 
 #include <string>
+
 // Represents a user profile in the system
 class Profile {
 private:

@@ -8,36 +8,36 @@
 
 class SocialNetwork {
 private:
-    std::vector<User> users;
-    std::vector<Post> posts;
-    std::vector<Comment> comments;
-    int currentUserIndex; 
-    
-    int nextUserNum;
-    int nextPostNum;
+    std::vector<User> users;        // registered users database
+    std::vector<Post> posts;        // published posts database
+    std::vector<Comment> comments;  // posted comments database
 
-    bool isUsernameTaken(const std::string& uname) const;
-    int findUserIndex(const std::string& uname);
-    int findPostIndex(const std::string& postId);
-    int getCommentCountForPost(const std::string& postId) const;
+    int currentUserIndex;  
+    int nextUserNum;  // counter for generating user IDs
+    int nextPostNum;  // counter for generating post IDs
+
+    bool isUsernameTaken(const std::string& uname) const;         // checks and makes sure that the username was not taken before
+    int findUserIndex(const std::string& uname);                  // finds the index of the user in the vector
+    int findPostIndex(const std::string& postId);                 // finds the index of the post in the vector
+    int getCommentCountForPost(const std::string& postId) const;  // counts the comments of a post
     
-    void loadData(); 
-    void saveData(); 
+    void loadData();  // loads data from txt files at app startup
+    void saveData();  // saves data to txt files on changes/app shutdown
 
 public:
-    SocialNetwork(); // constructor
+    SocialNetwork();  // constructor
     ~SocialNetwork(); // destructor
-    void start();
+    void start();     // starts the main app menu loop
     
     void registerUser();
     void loginUser();
     void editProfile();
     void createPost();
-    
+
     void viewProfile();
-    void manageRelationships();
-    void viewHomeFeed();
-    void interactWithPost();
-    void searchSystem();
+    void manageRelationships();  // handles follow/unfollow logic
+    void viewHomeFeed();         // displays current user's and followed users posts
+    void interactWithPost();     // handles likes and comments on a post
+    void searchSystem();         // handles searching for users and post contents
 };
 #endif

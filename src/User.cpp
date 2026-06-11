@@ -2,52 +2,41 @@
 #include <functional>
 #include <algorithm>
 
+// Hashes password for security
 std::string User::hashPassword(const std::string& pass) const {
     std::hash<std::string> hasher;
     return std::to_string(hasher(pass));
 }
 
+// Constructor: Initializes basic info and hashes password if needed
 User::User(std::string uId, std::string uname, std::string pass, Profile prof, bool isHashed) 
     : id(uId), username(uname), userProfile(prof) {
     passwordHash = isHashed ? pass : hashPassword(pass);
 }
 
-std::string User::getId() const { 
-    return id; 
-}
+// Identity Getters
+std::string User::getId() const { return id; }
+std::string User::getUsername() const { return username; }
+std::string User::getPasswordHash() const { return passwordHash; }
 
-std::string User::getUsername() const { 
-    return username; 
-}
-
-std::string User::getPasswordHash() const { 
-    return passwordHash; 
-}
-
-Profile& User::getProfile() { 
-    return userProfile; 
-}
-
-const Profile& User::getProfile() const { 
-    return userProfile; 
-}
+// Profile accessors
+Profile& User::getProfile() { return userProfile; }
+const Profile& User::getProfile() const { return userProfile; }
 
 bool User::verifyPassword(const std::string& pass) const {
     return passwordHash == hashPassword(pass);
 }
 
+// Updates password with a new hash
 void User::changePassword(const std::string& newPass) {
     passwordHash = hashPassword(newPass);
 }
 
-const std::vector<std::string>& User::getFollowing() const { 
-    return following; 
-}
+// Social Networking Getters
+const std::vector<std::string>& User::getFollowing() const { return following; }
+const std::vector<std::string>& User::getFollowers() const { return followers; }
 
-const std::vector<std::string>& User::getFollowers() const { 
-    return followers; 
-}
-
+// Adds a user to the following list if not already present
 bool User::followUser(const std::string& targetUsername) {
     for (size_t i = 0; i < following.size(); i++) {
         if (following[i] == targetUsername) return false; 
@@ -56,6 +45,7 @@ bool User::followUser(const std::string& targetUsername) {
     return true;
 }
 
+// Removes a user from following list
 bool User::unfollowUser(const std::string& targetUsername) {
     for (auto it = following.begin(); it != following.end(); ++it) {
         if (*it == targetUsername) {
@@ -66,16 +56,16 @@ bool User::unfollowUser(const std::string& targetUsername) {
     return false;
 }
 
+// Management of followers list
 void User::addFollower(const std::string& followerUsername) {
     bool exists = false;
     for (size_t i = 0; i < followers.size(); i++) {
         if (followers[i] == followerUsername) exists = true;
     }
-    if (!exists) {
-        followers.push_back(followerUsername);
-    }
+    if (!exists) followers.push_back(followerUsername);
 }
 
+// Removes a follower from the list
 void User::removeFollower(const std::string& followerUsername) {
     auto it = std::find(followers.begin(), followers.end(), followerUsername);
     if (it != followers.end()) {

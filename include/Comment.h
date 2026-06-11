@@ -12,6 +12,8 @@ private:
 
 public:
     Comment(std::string pId, std::string auth, std::string txt, std::string time);
+
+    // Getters
     std::string getPostId() const;
     std::string getAuthor() const;
     std::string getText() const;
